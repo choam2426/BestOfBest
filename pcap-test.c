@@ -1,7 +1,18 @@
 #include <pcap.h>
 #include <stdbool.h>
 #include <stdio.h>
+#define ETHER_ADDR_LEN 6
 
+struct libnet_ethernet_hdr
+{
+    u_int8_t  ether_dhost[ETHER_ADDR_LEN];/* destination ethernet address */
+    u_int8_t  ether_shost[ETHER_ADDR_LEN];/* source ethernet address */
+    u_int16_t ether_type;                 /* protocol */
+};
+
+void PrintMac(uint8_t *m){
+	printf("%02x:%02x:%02x:%02x:%02x:%02x",  m[0],m[1],m[2],m[3],m[4],m[5]);	
+}
 void usage() {
 	printf("syntax: pcap-test <interface>\n");
 	printf("sample: pcap-test wlan0\n");
@@ -45,6 +56,9 @@ int main(int argc, char* argv[]) {
 			break;
 		}
 		printf("%u bytes captured\n", header->caplen);
+		struct libnet_ethernet_hdr *eth_hdr=(struct libnet_ethernet_hdr *)packet;
+		PrintMac(eth_hdr->ether_shost);
+
 	}
 
 	pcap_close(pcap);
