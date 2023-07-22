@@ -95,7 +95,7 @@ void PrintIP(struct libnet_ipv4_hdr* ipv4_hdr){
 	printf("SIP Address : %s DIP Address : %s ", inet_ntoa(ipv4_hdr->ip_src), inet_ntoa(ipv4_hdr->ip_dst));
 }
 
-void PrintData(char* data){
+void PrintData(unsigned char* data){
 	int i = 0;
 	printf("Data : ");
 	while (i <10){
@@ -150,15 +150,16 @@ int main(int argc, char* argv[]) {
 		struct libnet_ethernet_hdr *eth_hdr=(struct libnet_ethernet_hdr *)packet;
 		struct libnet_ipv4_hdr *ipv4_hdr=(struct libnet_ipv4_hdr *)(packet + 14);
 		struct libnet_tcp_hdr *tcp_hdr=(struct libnet_tcp_hdr *)(packet + 14 + ipv4_hdr->ip_hl*4);
-		char* data = (char *)(packet + 14 + ipv4_hdr->ip_hl*4 + tcp_hdr->th_off*4);
+		unsigned char* data = (unsigned char *)(packet + 14 + ipv4_hdr->ip_hl*4 + tcp_hdr->th_off*4);
 		if (ipv4_hdr->ip_p==6){
 			PrintMac(eth_hdr->ether_shost);
 			PrintIP(ipv4_hdr);
-			printf("%d %d\n", ntohs(tcp_hdr->th_sport), ntohs(tcp_hdr->th_dport));
+			printf("sport : %d dport : %d\n", ntohs(tcp_hdr->th_sport), ntohs(tcp_hdr->th_dport));
 			PrintData(data);
 		}
 
 	}
+
 
 
 
