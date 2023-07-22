@@ -58,18 +58,9 @@ struct libnet_tcp_hdr
     u_int16_t th_dport;       /* destination port */
     u_int32_t th_seq;          /* sequence number */
     u_int32_t th_ack;          /* acknowledgement number */
-#if (LIBNET_LIL_ENDIAN)
     u_int8_t th_x2:4,         /* (unused) */
            th_off:4;        /* data offset */
-#endif
-#if (LIBNET_BIG_ENDIAN)
-    u_int8_t th_off:4,        /* data offset */
-           th_x2:4;         /* (unused) */
-#endif
-    u_int8_t  th_flags;       /* control flags */
-#ifndef TH_FIN
 #define TH_FIN    0x01      /* finished send data */
-#endif
 #ifndef TH_SYN
 #define TH_SYN    0x02      /* synchronize sequence numbers */
 #endif
@@ -104,6 +95,15 @@ void PrintIP(struct libnet_ipv4_hdr* ipv4_hdr){
 	printf("SIP Address : %s DIP Address : %s ", inet_ntoa(ipv4_hdr->ip_src), inet_ntoa(ipv4_hdr->ip_dst));
 }
 
+void PrintData(char* data){
+	int i = 0;
+	printf("Data : ");
+	while (i <10){
+		printf("%02x ", data[i]);
+		i++;
+	}
+	printf("\n---------------------------------------------------------------------------------\n");	
+}
 
 void usage() {
 	printf("syntax: pcap-test <interface>\n");
@@ -150,10 +150,12 @@ int main(int argc, char* argv[]) {
 		struct libnet_ethernet_hdr *eth_hdr=(struct libnet_ethernet_hdr *)packet;
 		struct libnet_ipv4_hdr *ipv4_hdr=(struct libnet_ipv4_hdr *)(packet + 14);
 		struct libnet_tcp_hdr *tcp_hdr=(struct libnet_tcp_hdr *)(packet + 14 + ipv4_hdr->ip_hl*4);
+		char* data = (char *)(packet + 14 + ipv4_hdr->ip_hl*4 + tcp_hdr->th_off*4);
 		if (ipv4_hdr->ip_p==6){
 			PrintMac(eth_hdr->ether_shost);
 			PrintIP(ipv4_hdr);
 			printf("%d %d\n", ntohs(tcp_hdr->th_sport), ntohs(tcp_hdr->th_dport));
+			PrintData(data);
 		}
 
 	}
