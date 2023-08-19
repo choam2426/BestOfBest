@@ -6,10 +6,50 @@
 #include <linux/types.h>
 #include <linux/netfilter.h>		/* for NF_ACCEPT */
 #include <errno.h>
-
 #include <libnetfilter_queue/libnetfilter_queue.h>
+#include <string.h>
+
+char *hostname = NULL;
+char signature[3][4] = {{0x47, 0x45, 0x54, 0x20}, {0x50, 0x4F, 0x53, 0x54}, {0x50, 0x55, 0x54, 0x20}};
+char DELETE_sig[6] = {0x44, 0x45, 0x4C, 0x45, 0x54, 0x45};
+
+int find_str(unsigned char* buf){
+	int length = 7 + strlen(hostname);
+	char s[length];
+	snprintf(s, sizeof(s), "Host: %s", hostname);
+	if (strstr((char *)buf, s) != NULL) {
+		printf("DROP!!!!!!!!!!!!!!!!!!!!");
+        return 1;
+    	}
+    return 0;
+}
 
 /* returns packet id */
+u_int32_t judge(struct nfq_data *tb) {
+	unsigned char *data;
+	int ret;
+	ret = nfq_get_payload(tb, &data);
+	char ip_hdr_ver = data[0] >> 4;
+        char ip_hdr_len = (data[0] & 0b00001111)*4;
+	char tcp_hdr_off = ((data[ip_hdr_len+12]>>4)*4)+ip_hdr_len;
+	for(int i=0; i<3; i++){
+		if (memcmp(signature[i], &data[tcp_hdr_off], 4) == 0){
+			if(find_str(&data[tcp_hdr_off])){
+			
+				return NF_DROP;
+			}
+		}
+	}
+	if (memcmp(DELETE_sig, &data[tcp_hdr_off], 6) == 0){
+		if(find_str(&data[tcp_hdr_off])){
+
+			return NF_DROP;
+		}
+	}
+        return NF_ACCEPT;
+}
+
+
 static u_int32_t print_pkt (struct nfq_data *tb)
 {
 	int id = 0;
@@ -56,9 +96,9 @@ static u_int32_t print_pkt (struct nfq_data *tb)
 		printf("physoutdev=%u ", ifi);
 
 	ret = nfq_get_payload(tb, &data);
-	if (ret >= 0)
+	if (ret >= 0){
 		printf("payload_len=%d ", ret);
-
+	}
 	fputc('\n', stdout);
 
 	return id;
@@ -69,9 +109,11 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 	      struct nfq_data *nfa, void *data)
 {
 	u_int32_t id = print_pkt(nfa);
+	u_int32_t result = judge(nfa);
 	printf("entering callback\n");
-	return nfq_set_verdict(qh, id, NF_ACCEPT, 0, NULL);
+	return nfq_set_verdict(qh, id, result, 0, NULL);
 }
+
 
 int main(int argc, char **argv)
 {
@@ -81,7 +123,7 @@ int main(int argc, char **argv)
 	int fd;
 	int rv;
 	char buf[4096] __attribute__ ((aligned));
-
+	hostname = strdup(argv[1]);
 	printf("opening library handle\n");
 	h = nfq_open();
 	if (!h) {
@@ -120,6 +162,7 @@ int main(int argc, char **argv)
 		if ((rv = recv(fd, buf, sizeof(buf), 0)) >= 0) {
 			printf("pkt received\n");
 			nfq_handle_packet(h, buf, rv);
+			printf("\n");	
 			continue;
 		}
 		/* if your application is too slow to digest the packets that
