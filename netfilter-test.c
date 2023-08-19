@@ -29,21 +29,22 @@ u_int32_t judge(struct nfq_data *tb) {
 	unsigned char *data;
 	int ret;
 	ret = nfq_get_payload(tb, &data);
-	char ip_hdr_ver = data[0] >> 4;
-        char ip_hdr_len = (data[0] & 0b00001111)*4;
-	char tcp_hdr_off = ((data[ip_hdr_len+12]>>4)*4)+ip_hdr_len;
-	for(int i=0; i<3; i++){
-		if (memcmp(signature[i], &data[tcp_hdr_off], 4) == 0){
-			if(find_str(&data[tcp_hdr_off])){
-			
-				return NF_DROP;
+	char ip_hdr_ver = data[0] >> 4; //version
+        char ip_hdr_len = (data[0] & 0b00001111)*4; //IP header length
+	char data_off = ((data[ip_hdr_len+12]>>4)*4)+ip_hdr_len; //IHL + THL = data_offset
+	
+	if (ip_hdr_ver == 4){ //IPv4
+		for(int i=0; i<3; i++){
+			if (memcmp(signature[i], &data[data_off], 4) == 0){
+				if(find_str(&data[data_off])){
+					return NF_DROP;
+				}
 			}
 		}
-	}
-	if (memcmp(DELETE_sig, &data[tcp_hdr_off], 6) == 0){
-		if(find_str(&data[tcp_hdr_off])){
-
-			return NF_DROP;
+		if (memcmp(DELETE_sig, &data[data_off], 6) == 0){
+			if(find_str(&data[data_off])){
+				return NF_DROP;
+			}
 		}
 	}
         return NF_ACCEPT;
