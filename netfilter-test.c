@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -9,10 +8,12 @@
 #include <libnetfilter_queue/libnetfilter_queue.h>
 #include <string.h>
 
-char *hostname = NULL;
+char *hostname = NULL; //argv[1] 저장용
+//GET, POST, PUT
 char signature[3][4] = {{0x47, 0x45, 0x54, 0x20}, {0x50, 0x4F, 0x53, 0x54}, {0x50, 0x55, 0x54, 0x20}};
 char DELETE_sig[6] = {0x44, 0x45, 0x4C, 0x45, 0x54, 0x45};
 
+//data에 "Host: " + argv[1] 있는지 확인
 int find_str(unsigned char* buf){
 	int length = 7 + strlen(hostname);
 	char s[length];
@@ -24,7 +25,7 @@ int find_str(unsigned char* buf){
     return 0;
 }
 
-/* returns packet id */
+//차단할 패킷인지 판정하는 함수
 u_int32_t judge(struct nfq_data *tb) {
 	unsigned char *data;
 	int ret;
@@ -34,20 +35,21 @@ u_int32_t judge(struct nfq_data *tb) {
 	char data_off = ((data[ip_hdr_len+12]>>4)*4)+ip_hdr_len; //IHL + THL = data_offset
 	
 	if (ip_hdr_ver == 4){ //IPv4
-		for(int i=0; i<3; i++){
+		for(int i=0; i<3; i++){ //GET, POST, PUT 인지 확인
 			if (memcmp(signature[i], &data[data_off], 4) == 0){
 				if(find_str(&data[data_off])){
-					return NF_DROP;
+					return NF_DROP; //차단
 				}
 			}
 		}
+		//DELETE 메소드인지 확인
 		if (memcmp(DELETE_sig, &data[data_off], 6) == 0){
 			if(find_str(&data[data_off])){
 				return NF_DROP;
 			}
 		}
 	}
-        return NF_ACCEPT;
+        return NF_ACCEPT; //패킷 허용
 }
 
 
@@ -110,7 +112,7 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 	      struct nfq_data *nfa, void *data)
 {
 	u_int32_t id = print_pkt(nfa);
-	u_int32_t result = judge(nfa);
+	u_int32_t result = judge(nfa); //패킷 처리 판단
 	printf("entering callback\n");
 	return nfq_set_verdict(qh, id, result, 0, NULL);
 }
