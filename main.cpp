@@ -159,14 +159,14 @@ int main(){
         // }
         std::array<char, 6> bssid;
         std::memcpy(bssid.data(), packet + rthdr->it_len + 16, 6);
-        auto is_exist_key = airodump_data_map.find(bssid);
-        if (is_exist_key == airodump_data_map.end()){
-            airodump_data_map[bssid] = {0,0,0,0,0,0,0,0};
-        }
-        airodump_data_map[bssid][ad_PWR] = pwr;
-        airodump_data_map[bssid][ad_CH] = channel;
 
         if (packet_type == 0x80){
+            auto is_exist_key = airodump_data_map.find(bssid);
+            if (is_exist_key == airodump_data_map.end()){
+                airodump_data_map[bssid] = {0,0,0,0,0,0,0,0};
+            }
+            airodump_data_map[bssid][ad_PWR] = pwr;
+            airodump_data_map[bssid][ad_CH] = channel;
             int beaconsValue = airodump_data_map[bssid][ad_Beacons];
             beaconsValue += 1;
             airodump_data_map[bssid][ad_Beacons] = beaconsValue;
@@ -186,19 +186,21 @@ int main(){
                 tag_number = *(packet + temp_offset);
                 tag_len = *(packet + temp_offset + 1);
             }
-            uint8_t encrypt_type = *(packet + temp_offset + 7);
-            airodump_data_map[bssid][ad_ENC] = encrypt_type;
-            airodump_data_map[bssid][ad_CIPTHER] = encrypt_type;
+            uint8_t cipher_type = *(packet + temp_offset + 13);
+            airodump_data_map[bssid][ad_CIPTHER] = cipher_type;
             uint8_t cipher_count = *(packet + temp_offset + 8);
             uint8_t auth_type = *(packet + temp_offset + 15 + (cipher_count * 4));
             airodump_data_map[bssid][ad_AUTH] = auth_type;
+
+
+            //데이터 출력
+            for(int i = 0; i < 8; i++){
+            std::cout << (airodump_data_map[bssid][i]) << std::endl;
+            }
+            std::cout << airodump_essid_map[bssid] << std::endl;
         }
 
-        for(int i = 0; i < 8; i++){
-            std::cout << (airodump_data_map[bssid][i]) << std::endl;
-        }
         
-        std::cout << airodump_essid_map[bssid] << std::endl;
     }
     pcap_close(pcap);
     return 0;
