@@ -1,5 +1,8 @@
 #include <pcap.h>
 #include <cstring>
+#include <map>
+#include <string>
+
 struct radiotap_header {
     uint8_t it_version;     /* set to 0 */
     uint8_t it_pad;
@@ -45,7 +48,7 @@ enum present_flag {
 struct airodump_data {
     uint16_t channel;
     int8_t pwr;
-    uint8_t bssid[6];
+    char bssid[6];
 };
 
 // present flag가 끝나는 위치를 찾는 함수
@@ -74,9 +77,10 @@ int find_offset_of_last_present(const u_char *packet, uint32_t first_present){
 }
 
 int main(){
+    std::map<std::string, int> beacons_map;
     char errbuf[PCAP_ERRBUF_SIZE];
-	// pcap_t *pcap = pcap_open_live("wlan0", BUFSIZ, 1, 1, errbuf);
-    pcap_t *pcap = pcap_open_offline("/home/kali/airodump/pcap/beacon-a2000ua-testap.pcap", errbuf);
+	pcap_t *pcap = pcap_open_live("wlan0", BUFSIZ, 1, 1, errbuf);
+    // pcap_t *pcap = pcap_open_offline("/home/kali/airodump/pcap/beacon-a2000ua-testap.pcap", errbuf);
     while(true){
         struct pcap_pkthdr *header;
 		const u_char *packet;
@@ -139,19 +143,30 @@ int main(){
 
         uint8_t packet_type = *(uint8_t *)(packet + rthdr->it_len);
         memcpy(airodump_data->bssid, packet + rthdr->it_len + 16, 6);
-        for (int i = 0; i<6; i++){
-            printf("%x ", airodump_data->bssid[i]);
+        // for (int i = 0; i<6; i++){
+        //     printf("%x", airodump_data->bssid[i]);
+        // }
+
+        std::string bssid_str(airodump_data->bssid, 6);
+        auto is_exist_key = beacons_map.find(bssid_str);
+        if (is_exist_key == beacons_map.end()){
+            beacons_map[bssid_str] = 0;
         }
+        // printf("z %d\n", beacons_map[bssid_str]);
+
+
         if (packet_type == 0x80){
             printf("beacon frame\n");
+            beacons_map[bssid_str]+=1;
             int tagged_parameters_offset = rthdr->it_len + 36;
             int ssid_len = *(packet + tagged_parameters_offset+1);
-            char ssid[ssid_len];
+            u_char ssid[ssid_len];
             memcpy(ssid, packet + tagged_parameters_offset + 2, ssid_len);
-            for (int i = 0; i<6; i++){
-            printf("%x ", ssid[i]);
+            for (int i = 0; i<ssid_len; i++){
+            printf("%c", ssid[i]);
             }
             printf("\n");
+            printf("z %d\n", beacons_map[bssid_str]);
         }
 
 
