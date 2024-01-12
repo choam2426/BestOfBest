@@ -65,6 +65,13 @@ enum airodump_data_index {
     ad_AUTH,
 };
 
+enum ENC_type{
+    WEP,
+    WPA,
+    WPA2,
+    WPA3
+};
+
 // present flag가 끝나는 위치를 찾는 함수
 int find_offset_of_last_present(const u_char *packet, uint32_t first_present){
     int offset_of_last_present = 8; 
@@ -178,19 +185,40 @@ int main(){
             std::string essid_str(essid, essid_len);
             airodump_essid_map[bssid] = essid_str;
 
-            int temp_offset = tagged_parameters_offset + 2 + essid_len;
+            uint temp_offset = tagged_parameters_offset + 2 + essid_len;
             uint8_t tag_number = *(packet + temp_offset);
             uint8_t tag_len = *(packet + temp_offset + 1);
-            while(tag_number != 48){
+            while(true){
                 temp_offset += 2 + tag_len;
                 tag_number = *(packet + temp_offset);
                 tag_len = *(packet + temp_offset + 1);
+                if (tag_number == 48){
+                    uint8_t cipher_type = *(packet + temp_offset + 13);
+                    airodump_data_map[bssid][ad_CIPTHER] = cipher_type;
+                    uint8_t cipher_count = *(packet + temp_offset + 8);
+                    uint8_t auth_type = *(packet + temp_offset + 15 + (cipher_count * 4));
+                    airodump_data_map[bssid][ad_AUTH] = auth_type;
+                    switch(auth_type){
+                        case 8:
+                            airodump_data_map[bssid][ad_ENC] = WPA3;
+                        case 2:
+                            airodump_data_map[bssid][ad_ENC] = WPA2;
+                    }
+                    break;
+                }
+                if(tag_number == 221){
+                    uint32_t OUI = *(uint32_t *)(packet + temp_offset + 2);
+                    if(ntohl(OUI)==0x50f201){
+                        printf("WPA1!!!!!\n");
+                        airodump_data_map[bssid][ad_ENC] = WPA;
+                    }
+                }
+                if(temp_offset>header->len){
+                    printf("bad\n");
+                    break;
+                }
             }
-            uint8_t cipher_type = *(packet + temp_offset + 13);
-            airodump_data_map[bssid][ad_CIPTHER] = cipher_type;
-            uint8_t cipher_count = *(packet + temp_offset + 8);
-            uint8_t auth_type = *(packet + temp_offset + 15 + (cipher_count * 4));
-            airodump_data_map[bssid][ad_AUTH] = auth_type;
+            
 
 
             //데이터 출력
