@@ -1,6 +1,6 @@
 # Compiler settings - Can be customized.
 CC=g++
-CFLAGS=-Wall -std=c++11
+CFLAGS=-Wall -std=c++17
 LIBS=-lpcap
 
 # Makefile settings - the file name.
