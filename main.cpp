@@ -94,8 +94,8 @@ int main(){
     std::map<std::array<char, 6>, std::array<int, 8>> airodump_data_map;
     std::map<std::array<char, 6>, std::string> airodump_essid_map;
     char errbuf[PCAP_ERRBUF_SIZE];
-	// pcap_t *pcap = pcap_open_live("wlan0", BUFSIZ, 1, 1, errbuf);
-    pcap_t *pcap = pcap_open_offline("/home/kali/airodump/pcap/beacon-a2000ua-testap.pcap", errbuf);
+	pcap_t *pcap = pcap_open_live("wlan0", BUFSIZ, 1, 1, errbuf);
+    // pcap_t *pcap = pcap_open_offline("/home/kali/airodump/pcap/beacon-a2000ua-testap.pcap", errbuf);
     while(true){
         struct pcap_pkthdr *header;
 		const u_char *packet;
