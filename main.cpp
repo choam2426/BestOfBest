@@ -1,9 +1,10 @@
 #include <pcap.h>
+#include <cstring>
 struct radiotap_header {
-        u_int8_t        it_version;     /* set to 0 */
-        u_int8_t        it_pad;
-        u_int16_t       it_len;         /* entire length */
-        u_int32_t       it_present;     /* fields present */
+    u_int8_t it_version;     /* set to 0 */
+    u_int8_t it_pad;
+    u_int16_t it_len;         /* entire length */
+    u_int32_t it_present;     /* fields present */
 } __attribute__((__packed__));
 
 enum present_flag {
@@ -39,6 +40,11 @@ enum present_flag {
 	RADIOTAP_NAMESPACE,
 	VENDOR_NAMESPACE,
 	EXT
+};
+
+struct airodump_data {
+    u_int16_t channel;
+    int8_t pwr;
 };
 
 // present flag가 끝나는 위치를 찾는 함수
@@ -77,21 +83,59 @@ int main(){
         if (res <= 0) continue;
 
         radiotap_header *rthdr = (struct radiotap_header *)packet;
+        //출력할 데이터 저장할 구조체 초기화
+        struct airodump_data *airodump_data;
+        airodump_data = new struct airodump_data;
 
         // printf("Radiotap Header Values:\n");
         // printf("Version: %u\n", rthdr->it_version);
         // printf("Pad: %u\n", rthdr->it_pad);
         // printf("Length: %u\n", rthdr->it_len);
         // printf("Present: %u\n", rthdr->it_present);
+
+        //첫 번째 present flag bit 저장
         int first_present_bit[32];
         for (int i = 0; i < 32; i++) {
             first_present_bit[i] = (rthdr->it_present >> i) & 1;
         }
+        //present flag가 끝나는 지점 계산
         int temp = find_offset_of_last_present(packet, rthdr->it_present);
-        printf("%d\n",temp);
-        // if (rthdr->it_present & 0x01){ // tsft flag가 1인 경우
-        //     end_of_present += 8;
-        // }
+
+        if (first_present_bit[TSFT]){ // tsft flag가 1인 경우
+            temp += 8;
+        }
+        if (first_present_bit[FLAGS]){ // Flags flag가 1인 경우
+            temp += 1;
+        }
+        if (first_present_bit[RATE]){ // Flags flag가 1인 경우
+            temp += 1;
+        }
+        if (first_present_bit[CHANNEL]){ // Flags flag가 1인 경우
+            u_int16_t channel_frequency = *(uint16_t *)(packet + temp);
+            temp += 2;
+            u_int16_t channel_flag = *(uint16_t *)(packet + temp);
+            // 대역 확인 후 채널 저장
+            if (channel_flag & (1 << 7)){ // 2.4ghz
+                airodump_data->channel = (channel_frequency - 2407) / 5;
+            }
+            else if (channel_flag & (1 << 8)){ // 5ghz
+                airodump_data->channel = (channel_frequency - 5000) / 5;
+            }
+            else{// 나오면 안되는 것
+                continue;
+            }
+            // printf("%d\n",airodump_data->channel);
+            temp += 2;
+        }
+        if (first_present_bit[FHSS]){
+            temp += 2;
+        }
+        if (first_present_bit[DBM_ANTENNA_SIGNAL]){
+            airodump_data->pwr = *(packet + temp);
+            temp += 2;
+            printf("%d\n", airodump_data->pwr);
+        }
+
     }
 
     return 0;
