@@ -3,7 +3,7 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <variant>
+#include <array>
 #include <iostream>
 
 struct radiotap_header {
@@ -63,7 +63,6 @@ enum airodump_data_index {
     ad_ENC,
     ad_CIPTHER,
     ad_AUTH,
-    ad_ESSID
 };
 
 // present flag가 끝나는 위치를 찾는 함수
@@ -92,8 +91,8 @@ int find_offset_of_last_present(const u_char *packet, uint32_t first_present){
 }
 
 int main(){
-    std::map<std::string, int> beacons_map;
-    std::map<std::string, std::vector<std::variant<int, std::string>>> airodump_data_map;
+    std::map<std::array<char, 6>, std::array<int, 8>> airodump_data_map;
+    std::map<std::array<char, 6>, std::string> airodump_essid_map;
     char errbuf[PCAP_ERRBUF_SIZE];
 	// pcap_t *pcap = pcap_open_live("wlan0", BUFSIZ, 1, 1, errbuf);
     pcap_t *pcap = pcap_open_offline("/home/kali/airodump/pcap/beacon-a2000ua-testap.pcap", errbuf);
@@ -101,15 +100,12 @@ int main(){
         struct pcap_pkthdr *header;
 		const u_char *packet;
         int res = pcap_next_ex(pcap, &header, &packet);
-        if (res <= 0) continue;
+        if (res <= 0) break;
 
         radiotap_header *rthdr = (struct radiotap_header *)packet;
-        //출력할 데이터 저장할 구조체 초기화
-        // struct airodump_data *airodump_data;
-        // airodump_data = new struct airodump_data;
-        int8_t pwr;
-        int channel;
-        char bssid[6];
+        int8_t pwr = 0;
+        int channel = 0;
+        // char bssid[6];
         // printf("Radiotap Header Values:\n");
         // printf("Version: %u\n", rthdr->it_version);
         // printf("Pad: %u\n", rthdr->it_pad);
@@ -147,7 +143,6 @@ int main(){
             else{// 나오면 안되는 것
                 continue;
             }
-            // printf("%d\n",airodump_data->channel);
             temp += 2;
         }
         if (first_present_bit[FHSS]){ // FHSS flag가 1인 경우
@@ -156,40 +151,55 @@ int main(){
         if (first_present_bit[DBM_ANTENNA_SIGNAL]){ // dBm Antenna Signal flag가 1인 경우
             pwr = *(packet + temp);
             temp += 2;
-            // printf("%d\n", airodump_data->pwr);
         }
         uint8_t packet_type = *(uint8_t *)(packet + rthdr->it_len);
         
-        memcpy(bssid, packet + rthdr->it_len + 16, 6);
         // for (int i = 0; i<6; i++){
         //     printf("%x", airodump_data->bssid[i]);
         // }
-
-        std::string bssid_str(bssid, 6);
-        auto is_exist_key = airodump_data_map.find(bssid_str);
+        std::array<char, 6> bssid;
+        std::memcpy(bssid.data(), packet + rthdr->it_len + 16, 6);
+        auto is_exist_key = airodump_data_map.find(bssid);
         if (is_exist_key == airodump_data_map.end()){
-            airodump_data_map[bssid_str] = {0,0,0,0,0,0,0," "};
+            airodump_data_map[bssid] = {0,0,0,0,0,0,0,0};
         }
-        // printf("z %d\n", beacons_map[bssid_str]);
-        airodump_data_map[bssid_str][0] = pwr;
-        airodump_data_map[bssid_str][3] = channel;
-        printf("%d", std::get<int>(airodump_data_map[bssid_str][ad_PWR]));
-        printf("%d", std::get<int>(airodump_data_map[bssid_str][ad_CH]));
+        airodump_data_map[bssid][ad_PWR] = pwr;
+        airodump_data_map[bssid][ad_CH] = channel;
 
         if (packet_type == 0x80){
-            printf("beacon frame\n");
-            airodump_data_map[bssid_str][ad_Beacons]+=1;
+            int beaconsValue = airodump_data_map[bssid][ad_Beacons];
+            beaconsValue += 1;
+            airodump_data_map[bssid][ad_Beacons] = beaconsValue;
             int tagged_parameters_offset = rthdr->it_len + 36;
             int essid_len = *(packet + tagged_parameters_offset+1);
-            char essid[essid_len];
-            memcpy(essid, packet + tagged_parameters_offset + 2, essid_len);
+            char essid[essid_len + 1];
+            strncpy(essid, (const char *)(packet + tagged_parameters_offset + 2), essid_len);
+            essid[essid_len] = '\0';
             std::string essid_str(essid, essid_len);
-            airodump_data_map[bssid_str][ad_ESSID] = essid_str;
-            std::cout << std::get<std::string>(airodump_data_map[bssid_str][ad_ESSID]) << std::endl;
+            airodump_essid_map[bssid] = essid_str;
+
+            int temp_offset = tagged_parameters_offset + 2 + essid_len;
+            uint8_t tag_number = *(packet + temp_offset);
+            uint8_t tag_len = *(packet + temp_offset + 1);
+            while(tag_number != 48){
+                temp_offset += 2 + tag_len;
+                tag_number = *(packet + temp_offset);
+                tag_len = *(packet + temp_offset + 1);
+            }
+            uint8_t encrypt_type = *(packet + temp_offset + 7);
+            airodump_data_map[bssid][ad_ENC] = encrypt_type;
+            airodump_data_map[bssid][ad_CIPTHER] = encrypt_type;
+            uint8_t cipher_count = *(packet + temp_offset + 8);
+            uint8_t auth_type = *(packet + temp_offset + 15 + (cipher_count * 4));
+            airodump_data_map[bssid][ad_AUTH] = auth_type;
         }
 
-
+        for(int i = 0; i < 8; i++){
+            std::cout << (airodump_data_map[bssid][i]) << std::endl;
+        }
+        
+        std::cout << airodump_essid_map[bssid] << std::endl;
     }
-
+    pcap_close(pcap);
     return 0;
 }
