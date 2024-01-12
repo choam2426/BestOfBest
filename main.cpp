@@ -144,6 +144,14 @@ int main(){
         }
         if (packet_type == 0x80){
             printf("beacon frame\n");
+            int tagged_parameters_offset = rthdr->it_len + 36;
+            int ssid_len = *(packet + tagged_parameters_offset+1);
+            char ssid[ssid_len];
+            memcpy(ssid, packet + tagged_parameters_offset + 2, ssid_len);
+            for (int i = 0; i<6; i++){
+            printf("%x ", ssid[i]);
+            }
+            printf("\n");
         }
 
 
