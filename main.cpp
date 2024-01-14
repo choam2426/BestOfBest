@@ -124,6 +124,48 @@ std::string macToString(const std::array<char, 6>& mac) {
     return ss.str();
 }
 
+std::string judge_cipher_type(int enc_byte) {
+    switch (enc_byte){
+        case 1:
+            return "WEP";
+        case 2:
+            return "TKIP";
+        case 4:
+            return "CCMP";
+        case 8:
+            return "SAE";
+        default:
+            return "what?";
+    }
+}
+
+
+std::string judge_enc_type(int enc_byte) {
+    switch (enc_byte){
+        case WEP:
+            return "WEP";
+        case WPA:
+            return "WPA";
+        case WPA2:
+            return "WPA2";
+        case WPA3:
+            return "WPA3";
+        default:
+            return "what?";
+    }
+}
+
+std::string judge_auth_type(int enc_byte) {
+    switch (enc_byte){
+        case 1:
+            return "802.11";
+        case 2:
+            return "PSK";
+        default:
+            return "what?";
+    }
+}
+
 int main(int argc, char* argv[]){
     print_title();
     std::map<std::array<char, 6>, std::array<int, 8>> airodump_data_map;
@@ -269,14 +311,14 @@ int main(int argc, char* argv[]){
             // std::cout << airodump_essid_map[bssid] << std::endl;
             std::string bssid_str = macToString(bssid);
             std::cout << std::left << std::setw(20) << bssid_str
-                    << std::setw(10) << airodump_data_map[bssid][0]
-                    << std::setw(10) << airodump_data_map[bssid][1]
-                    << std::setw(10) << airodump_data_map[bssid][2]
-                    << std::setw(10) << airodump_data_map[bssid][3]
-                    << std::setw(10) << airodump_data_map[bssid][4]
-                    << std::setw(10) << airodump_data_map[bssid][5]
-                    << std::setw(10) << airodump_data_map[bssid][6]
-                    << std::setw(10) << airodump_data_map[bssid][7]
+                    << std::setw(10) << airodump_data_map[bssid][ad_PWR]
+                    << std::setw(10) << airodump_data_map[bssid][ad_Beacons]
+                    << std::setw(10) << airodump_data_map[bssid][ad_Data]
+                    << std::setw(10) << airodump_data_map[bssid][ad_CH]
+                    << std::setw(10) << airodump_data_map[bssid][ad_MB]
+                    << std::setw(10) << judge_enc_type(airodump_data_map[bssid][ad_ENC])
+                    << std::setw(10) << judge_cipher_type(airodump_data_map[bssid][ad_CIPTHER])
+                    << std::setw(10) << judge_auth_type(airodump_data_map[bssid][ad_AUTH])
                     << std::setw(30) << essid << std::endl;
             // for (const auto& pair : airodump_data_map) {
             //     const auto& bssid = pair.first;
