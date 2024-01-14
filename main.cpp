@@ -5,6 +5,9 @@
 #include <vector>
 #include <array>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
+#include <cstdlib>
 
 struct radiotap_header {
     uint8_t it_version;     /* set to 0 */
@@ -97,13 +100,39 @@ int find_offset_of_last_present(const u_char *packet, uint32_t first_present){
     return offset_of_last_present;
 }
 
-int main(){
+void print_title(){
+    std::cout << std::left << std::setw(20) << "BSSID"
+              << std::setw(10) << "PWR"
+              << std::setw(10) << "Beacons"
+              << std::setw(10) << "Data"
+              << std::setw(10) << "CH"
+              << std::setw(10) << "MB"
+              << std::setw(10) << "ENC"
+              << std::setw(10) << "CIPHER"
+              << std::setw(10) << "AUTH"
+              << std::setw(30) << "ESSID" << std::endl;
+}
+
+std::string macToString(const std::array<char, 6>& mac) {
+    std::stringstream ss;
+    for (size_t i = 0; i < mac.size(); ++i) {
+        if (i != 0) {
+            ss << ":";
+        }
+        ss << std::hex << std::uppercase << std::setw(2) << std::setfill('0') << (static_cast<unsigned int>(mac[i]) & 0xFF);
+    }
+    return ss.str();
+}
+
+int main(int argc, char* argv[]){
+    print_title();
     std::map<std::array<char, 6>, std::array<int, 8>> airodump_data_map;
     std::map<std::array<char, 6>, std::string> airodump_essid_map;
     char errbuf[PCAP_ERRBUF_SIZE];
-	pcap_t *pcap = pcap_open_live("wlan0", BUFSIZ, 1, 1, errbuf);
-    // pcap_t *pcap = pcap_open_offline("/home/kali/airodump/pcap/beacon-a2000ua-testap.pcap", errbuf);
+	pcap_t *pcap = pcap_open_live(argv[1], BUFSIZ, 1, 1, errbuf);
+    // pcap_t *pcap = pcap_open_offline("", errbuf);
     while(true){
+        // system("clear");
         struct pcap_pkthdr *header;
 		const u_char *packet;
         int res = pcap_next_ex(pcap, &header, &packet);
@@ -111,7 +140,7 @@ int main(){
 
         radiotap_header *rthdr = (struct radiotap_header *)packet;
         int8_t pwr = 0;
-        int channel = 0;
+        // int channel = 0;
         // char bssid[6];
         // printf("Radiotap Header Values:\n");
         // printf("Version: %u\n", rthdr->it_version);
@@ -128,7 +157,7 @@ int main(){
         int temp = find_offset_of_last_present(packet, rthdr->it_present);
 
         if (first_present_bit[TSFT]){ // TSFT flag가 1인 경우
-            temp += 8;
+            temp += 6;
         }
         if (first_present_bit[FLAGS]){ // Flags flag가 1인 경우
             temp += 1;
@@ -137,19 +166,19 @@ int main(){
             temp += 1;
         }
         if (first_present_bit[CHANNEL]){ // Channel flag가 1인 경우
-            uint16_t channel_frequency = *(uint16_t *)(packet + temp);
+            // uint16_t channel_frequency = *(uint16_t *)(packet + temp);
             temp += 2;
-            uint16_t channel_flag = *(uint16_t *)(packet + temp);
-            // 대역 확인 후 채널 저장
-            if (channel_flag & (1 << 7)){ // 2.4ghz
-                channel = (channel_frequency - 2407) / 5;
-            }
-            else if (channel_flag & (1 << 8)){ // 5ghz
-                channel = (channel_frequency - 5000) / 5;
-            }
-            else{// 나오면 안되는 것
-                continue;
-            }
+            // uint16_t channel_flag = *(uint16_t *)(packet + temp);
+            // // 대역 확인 후 채널 저장
+            // if (channel_flag & (1 << 7)){ // 2.4ghz
+            //     channel = (channel_frequency - 2407) / 5;
+            // }
+            // else if (channel_flag & (1 << 8)){ // 5ghz
+            //     channel = (channel_frequency - 5000) / 5;
+            // }
+            // else{// 나오면 안되는 것
+            //     continue;
+            // }
             temp += 2;
         }
         if (first_present_bit[FHSS]){ // FHSS flag가 1인 경우
@@ -159,21 +188,26 @@ int main(){
             pwr = *(packet + temp);
             temp += 2;
         }
-        uint8_t packet_type = *(uint8_t *)(packet + rthdr->it_len);
-        
+        uint16_t packet_type = *(uint16_t *)(packet + rthdr->it_len);
         // for (int i = 0; i<6; i++){
         //     printf("%x", airodump_data->bssid[i]);
         // }
         std::array<char, 6> bssid;
         std::memcpy(bssid.data(), packet + rthdr->it_len + 16, 6);
-
-        if (packet_type == 0x80){
+        
+        if ((ntohs(packet_type) & 0x0c00) == 0x0800){
+            auto is_exist_key = airodump_data_map.find(bssid);
+            if (is_exist_key != airodump_data_map.end()){
+                airodump_data_map[bssid][ad_Data] += 1;
+            }
+        }
+        if (ntohs(packet_type) == 0x8000){
             auto is_exist_key = airodump_data_map.find(bssid);
             if (is_exist_key == airodump_data_map.end()){
                 airodump_data_map[bssid] = {0,0,0,0,0,0,0,0};
             }
             airodump_data_map[bssid][ad_PWR] = pwr;
-            airodump_data_map[bssid][ad_CH] = channel;
+            // airodump_data_map[bssid][ad_CH] = channel;
             int beaconsValue = airodump_data_map[bssid][ad_Beacons];
             beaconsValue += 1;
             airodump_data_map[bssid][ad_Beacons] = beaconsValue;
@@ -209,9 +243,16 @@ int main(){
                 if(tag_number == 221){
                     uint32_t OUI = *(uint32_t *)(packet + temp_offset + 2);
                     if(ntohl(OUI)==0x50f201){
-                        printf("WPA1!!!!!\n");
+                        // printf("WPA1!!!!!\n");
+                        airodump_data_map[bssid][ad_CIPTHER] = *(uint8_t *)(packet + temp_offset + 17);
+                        airodump_data_map[bssid][ad_AUTH] = *(uint8_t *)(packet + temp_offset + 19 + (*(packet + temp_offset + 12)) * 4);
+                        // printf("cip = %x\n", airodump_data_map[bssid][ad_CIPTHER]);
+                        // printf("auth = %x\n", (*(packet + temp_offset + 12)));
                         airodump_data_map[bssid][ad_ENC] = WPA;
                     }
+                }
+                if(tag_number == 3){
+                    airodump_data_map[bssid][ad_CH] = *(packet + temp_offset + 2);
                 }
                 if(temp_offset>header->len){
                     printf("bad\n");
@@ -222,10 +263,32 @@ int main(){
 
 
             //데이터 출력
-            for(int i = 0; i < 8; i++){
-            std::cout << (airodump_data_map[bssid][i]) << std::endl;
-            }
-            std::cout << airodump_essid_map[bssid] << std::endl;
+            // for(int i = 0; i < 8; i++){
+            // std::cout << (airodump_data_map[bssid][i]) << std::endl;
+            // }
+            // std::cout << airodump_essid_map[bssid] << std::endl;
+            std::string bssid_str = macToString(bssid);
+            std::cout << std::left << std::setw(20) << bssid_str
+                    << std::setw(10) << airodump_data_map[bssid][0]
+                    << std::setw(10) << airodump_data_map[bssid][1]
+                    << std::setw(10) << airodump_data_map[bssid][2]
+                    << std::setw(10) << airodump_data_map[bssid][3]
+                    << std::setw(10) << airodump_data_map[bssid][4]
+                    << std::setw(10) << airodump_data_map[bssid][5]
+                    << std::setw(10) << airodump_data_map[bssid][6]
+                    << std::setw(10) << airodump_data_map[bssid][7]
+                    << std::setw(30) << essid << std::endl;
+            // for (const auto& pair : airodump_data_map) {
+            //     const auto& bssid = pair.first;
+            //     const auto& data = pair.second;
+            //     std::string bssid_str = macToString(bssid);
+
+            //     std::cout << std::left << std::setw(20) << bssid_str;
+            //     for (int i = 0; i < 8; ++i) {
+            //         std::cout << std::setw(10) << data[i];
+            //     }
+            //     std::cout << std::setw(30) << airodump_essid_map[bssid] << std::endl;
+            // }
         }
 
         
