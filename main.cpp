@@ -134,6 +134,8 @@ std::string judge_cipher_type(int enc_byte) {
             return "CCMP";
         case 8:
             return "SAE";
+        case 10:
+            return "CCMP";
         default:
             return "what?";
     }
@@ -182,7 +184,7 @@ int main(int argc, char* argv[]){
 
         radiotap_header *rthdr = (struct radiotap_header *)packet;
         int8_t pwr = 0;
-        // int channel = 0;
+        int channel = 0;
         // char bssid[6];
         // printf("Radiotap Header Values:\n");
         // printf("Version: %u\n", rthdr->it_version);
@@ -208,19 +210,19 @@ int main(int argc, char* argv[]){
             temp += 1;
         }
         if (first_present_bit[CHANNEL]){ // Channel flag가 1인 경우
-            // uint16_t channel_frequency = *(uint16_t *)(packet + temp);
+            uint16_t channel_frequency = *(uint16_t *)(packet + temp);
             temp += 2;
-            // uint16_t channel_flag = *(uint16_t *)(packet + temp);
-            // // 대역 확인 후 채널 저장
-            // if (channel_flag & (1 << 7)){ // 2.4ghz
-            //     channel = (channel_frequency - 2407) / 5;
-            // }
-            // else if (channel_flag & (1 << 8)){ // 5ghz
-            //     channel = (channel_frequency - 5000) / 5;
-            // }
-            // else{// 나오면 안되는 것
-            //     continue;
-            // }
+            uint16_t channel_flag = *(uint16_t *)(packet + temp);
+            // 대역 확인 후 채널 저장
+            if (channel_flag & (1 << 7)){ // 2.4ghz
+                channel = (channel_frequency - 2407) / 5;
+            }
+            else if (channel_flag & (1 << 8)){ // 5ghz
+                channel = (channel_frequency - 5000) / 5;
+            }
+            else{// 나오면 안되는 것
+                continue;
+            }
             temp += 2;
         }
         if (first_present_bit[FHSS]){ // FHSS flag가 1인 경우
@@ -249,7 +251,7 @@ int main(int argc, char* argv[]){
                 airodump_data_map[bssid] = {0,0,0,0,0,0,0,0};
             }
             airodump_data_map[bssid][ad_PWR] = pwr;
-            // airodump_data_map[bssid][ad_CH] = channel;
+            airodump_data_map[bssid][ad_CH] = channel;
             int beaconsValue = airodump_data_map[bssid][ad_Beacons];
             beaconsValue += 1;
             airodump_data_map[bssid][ad_Beacons] = beaconsValue;
