@@ -39,7 +39,7 @@ struct beacon_frame_struct{
     uint8_t rate = 0x02;
     uint16_t channel_frequency = 0x097b;
     uint16_t channel_flag = 0xa0;
-    uint8_t antenna_signal = 0xc4;
+    uint8_t antenna_signal = 0xf0;
     uint16_t type = 0x0080;
     uint16_t duration = 0;
     std::array<unsigned char, 6> d_address = {255,255,255,255,255,255};
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]){
         std::string line;
         while (std::getline(file, line)) {
             send_beacon(pcap, line);
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            // std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
         file.clear();
         file.seekg(0, std::ios::beg);
