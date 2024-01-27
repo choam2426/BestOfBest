@@ -7,6 +7,7 @@ class MongoDB:
 
     def connect(self):
         self.client = AsyncIOMotorClient("localhost:27017")
+        self.db = self.client["firewall"]
 
     def close(self):
         self.client.close()

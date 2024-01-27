@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>firewall</title>
+    {% include 'bootstrap_cdn.html' %}
+  </head>
+  <body>
+    {% include 'navbar.html' %}
+    <div>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th scope="col">number</th>
+            <th scope="col">target</th>
+            <th scope="col">protocol</th>
+            <th scope="col">source</th>
+            <th scope="col">destination</th>
+            <th scope="col">sport</th>
+            <th scope="col">dport</th>
+            <th scope="col"></th>
+            <th scope="col">
+              <button type="button" class="btn btn-primary" id="create_rule">
+                생성
+              </button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rule in rules %}
+          <tr id="rule['_id']">
+            <th scope="row">{{ loop.index0 }}</th>
+            <td>{{rule["target"]}}</td>
+            <td>{{rule["protocol"]}}</td>
+            <td>{{rule["s_ip"]}}</td>
+            <td>{{rule["d_ip"]}}</td>
+            <td>{{rule["s_port"]}}</td>
+            <td>{{rule["d_port"]}}</td>
+            <td>
+              <button type="button" class="btn btn-success">수정</button>
+            </td>
+            <td>
+              <button type="button" class="btn btn-danger">삭제</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <script>
+      document
+        .getElementById("create_rule")
+        .addEventListener("click", function () {
+          const redirectUrl = "/rules/create";
+          window.location.href = redirectUrl;
+        });
+    </script>
+  </body>
+</html>

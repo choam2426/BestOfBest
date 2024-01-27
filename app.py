@@ -1,22 +1,27 @@
+from contextlib import asynccontextmanager
+
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from routers import routers
 from src.db_connect import mongodb
-
-app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+from src.update_iptables_rules_to_db import rewrite
 
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     mongodb.connect()
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
+    await rewrite()
+    yield
     mongodb.close()
+
+
+app = FastAPI(lifespan=lifespan)
+templates = Jinja2Templates(directory="templates")
+for router in routers:
+    app.include_router(router)
 
 
 @app.get(path="/")
