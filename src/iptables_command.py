@@ -1,9 +1,11 @@
 import subprocess
 
 
-def append_iptables_rule(rule_data):
-    command = ["sudo", "iptables", "-A", "FORWARD"]
-    print(rule_data["protocol"])
+def append_iptables_rule(rule_data, rule_number=None):
+    if rule_number:
+        command = ["sudo", "iptables", "-I", "FORWARD", (str(rule_number))]
+    else:
+        command = ["sudo", "iptables", "-A", "FORWARD"]
     if rule_data["protocol"] == "all":
         pass
     else:
@@ -26,14 +28,13 @@ def append_iptables_rule(rule_data):
     command.append("-j")
     command.append(rule_data["target"])
     subprocess.run(command)
-    return command
 
 
 def delete_iptables_rule(rule_number):
     command = ["sudo", "iptables", "-D", "FORWARD", str(rule_number)]
     subprocess.run(command)
-    return command
 
 
 def update_iptables_rule(rule_number, rule_data):
-    return 1
+    delete_iptables_rule(rule_number)
+    print(append_iptables_rule(rule_data=rule_data, rule_number=rule_number))

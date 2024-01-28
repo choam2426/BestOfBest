@@ -28,8 +28,7 @@ async def get_rule_create_page(request: Request):
 
 @router.post(path="/create")
 async def create_iptables_rules(request: Request, new_rule_data: iptable_rule):
-    print(append_iptables_rule(new_rule_data.model_dump()))
-    await rewrite()
+    append_iptables_rule(new_rule_data.model_dump())
     return 1
 
 
@@ -47,11 +46,13 @@ async def update_iptables_rules(
         {"number": rule_number}, {"_id": 0, "real_num": 1}
     )
     new_rule_data = new_rule_data.model_dump()
-    print(iptables_rule_number)
+    update_iptables_rule(
+        rule_number=iptables_rule_number["real_num"], rule_data=new_rule_data
+    )
     return 1
 
 
 @router.delete(path="/{rule_number}")
 async def get_rule_create_page(request: Request, rule_number: int = Path()):
-    print(rule_number)
+    delete_iptables_rule(rule_number)
     return 1

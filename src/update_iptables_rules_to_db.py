@@ -35,7 +35,7 @@ def parse_iptables_forward(command_result):
             other_info = " ".join(parts[9:])
             port_data = parse_port_number(other_info)
             rule = {
-                "real_num": number,
+                "real_num": number + 1,
                 "number": pass_count,
                 "target": parts[2],
                 "protocol": parts[3],
