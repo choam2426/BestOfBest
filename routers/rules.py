@@ -47,12 +47,22 @@ async def update_iptables_rules(
     request: Request, new_rule_data: iptable_rule, rule_number: int = Path()
 ):
     iptables_rules_collection = mongodb.db["iptables_rules"]
+    iptables_log_rules_collection = mongodb.db["iptables_log_rules"]
     iptables_rule_number = await iptables_rules_collection.find_one(
-        {"number": rule_number}, {"_id": 0, "real_num": 1}
+        {"number": rule_number}, {"_id": 1, "real_num": 1}
     )
     new_rule_data = new_rule_data.model_dump()
+    await iptables_rules_collection.update_one(
+        {"number": rule_number}, {"$set": new_rule_data}
+    )
+    await iptables_log_rules_collection.update_one(
+        {"number": rule_number}, {"$set": new_rule_data}
+    )
+
     update_iptables_rule(
-        rule_number=iptables_rule_number["real_num"], rule_data=new_rule_data
+        rule_number=iptables_rule_number["real_num"],
+        rule_data=new_rule_data,
+        ID=str(iptables_rule_number["_id"]),
     )
     return 1
 

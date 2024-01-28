@@ -23,3 +23,7 @@ class iptable_rule(BaseModel):
         if not 0 <= int_v <= 65535:
             raise ValueError("port는 0과 65535 사이의 값이어야 합니다")
         return v
+
+    @validator("s_ip", "d_ip")
+    def validate_and_convert_ip(cls, v):
+        return str(v)

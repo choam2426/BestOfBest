@@ -4,7 +4,7 @@ import subprocess
 
 def append_iptables_rule(rule_data, ID, rule_number=None):
     if rule_number:
-        command = ["sudo", "iptables", "-I", "FORWARD", (str(rule_number))]
+        command = ["sudo", "iptables", "-I", "FORWARD", (str(rule_number - 1))]
     else:
         command = ["sudo", "iptables", "-A", "FORWARD"]
     if rule_data["protocol"] == "all":
@@ -32,8 +32,12 @@ def append_iptables_rule(rule_data, ID, rule_number=None):
     log_command.append("LOG")
     log_command.append("--log-prefix")
     log_command.append(f"FID: {ID}")
-    subprocess.run(log_command)
-    subprocess.run(command)
+    if rule_number:
+        subprocess.run(command)
+        subprocess.run(log_command)
+    else:
+        subprocess.run(log_command)
+        subprocess.run(command)
 
 
 def delete_iptables_rule(rule_number):
@@ -42,6 +46,6 @@ def delete_iptables_rule(rule_number):
     subprocess.run(command)
 
 
-def update_iptables_rule(rule_number, rule_data):
+def update_iptables_rule(rule_number, rule_data, ID):
     delete_iptables_rule(rule_number)
-    print(append_iptables_rule(rule_data=rule_data, rule_number=rule_number))
+    append_iptables_rule(rule_data=rule_data, rule_number=rule_number, ID=ID)
