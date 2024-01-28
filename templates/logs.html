@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>firewall</title>
+    {% include 'bootstrap_cdn.html' %}
+  </head>
+  <body>
+    {% include 'navbar.html' %}
+    <div>
+      <table id="table" class="table table-striped">
+        <thead>
+          <tr>
+            <th scope="col">.</th>
+            <th scope="col">protocol</th>
+            <th scope="col">source</th>
+            <th scope="col">destination</th>
+            <th scope="col">sport</th>
+            <th scope="col">dport</th>
+          </tr>
+          <tr>
+            <th scope="col">.</th>
+            <th scope="col">
+              <input
+                type="text"
+                id="searchProtocol"
+                class="searchInput"
+                onkeyup="searchTable(0)"
+              />
+            </th>
+            <th scope="col">
+              <input
+                type="text"
+                id="searchSip"
+                class="searchInput"
+                onkeyup="searchTable(1)"
+              />
+            </th>
+            <th scope="col">
+              <input
+                type="text"
+                id="searchDip"
+                class="searchInput"
+                onkeyup="searchTable(2)"
+              />
+            </th>
+            <th scope="col">
+              <input
+                type="text"
+                id="searchSport"
+                class="searchInput"
+                onkeyup="searchTable(3)"
+              />
+            </th>
+            <th scope="col">
+              <input
+                type="text"
+                id="searchDport"
+                class="searchInput"
+                onkeyup="searchTable(4)"
+              />
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <th scope="row">{{ loop.index }}</th>
+            <td>{{log["protocol"]}}</td>
+            <td>{{log["src"]}}</td>
+            <td>{{log["dst"]}}</td>
+            <td>{{log["sport"]}}</td>
+            <td>{{log["dport"]}}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <script>
+      function searchTable(columnIndex) {
+        let input, filter, table, tr, td, i, txtValue;
+        input = document.getElementsByClassName("searchInput")[columnIndex];
+        filter = input.value.toUpperCase();
+        table = document.getElementById("table");
+        tr = table.getElementsByTagName("tr");
+
+        for (i = 2; i < tr.length; i++) {
+          td = tr[i].getElementsByTagName("td")[columnIndex]; // 인덱스 수정
+          if (td) {
+            txtValue = td.textContent || td.innerText;
+            if (txtValue.toUpperCase().indexOf(filter) > -1) {
+              tr[i].style.display = "";
+            } else {
+              tr[i].style.display = "none";
+            }
+          }
+        }
+      }
+    </script>
+  </body>
+</html>
