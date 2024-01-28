@@ -29,8 +29,8 @@
         </thead>
         <tbody>
           {% for rule in rules %}
-          <tr id="rule['_id']">
-            <th scope="row">{{ loop.index0 }}</th>
+          <tr id="{{rule['number']}}">
+            <th scope="row">{{ rule["number"] }}</th>
             <td>{{rule["target"]}}</td>
             <td>{{rule["protocol"]}}</td>
             <td>{{rule["s_ip"]}}</td>
@@ -38,10 +38,14 @@
             <td>{{rule["s_port"]}}</td>
             <td>{{rule["d_port"]}}</td>
             <td>
-              <button type="button" class="btn btn-success">수정</button>
+              <button type="button" class="btn btn-success update_rule">
+                수정
+              </button>
             </td>
             <td>
-              <button type="button" class="btn btn-danger">삭제</button>
+              <button type="button" class="btn btn-danger delete_rule">
+                삭제
+              </button>
             </td>
           </tr>
           {% endfor %}
@@ -55,6 +59,36 @@
           const redirectUrl = "/rules/create";
           window.location.href = redirectUrl;
         });
+
+      document.querySelectorAll(".update_rule").forEach((button) => {
+        button.addEventListener("click", function (event) {
+          let currentElement = event.target;
+          while (currentElement) {
+            if (currentElement.tagName === "TR") {
+              const redirectUrl = "/rules/update/" + currentElement.id;
+              window.location.href = redirectUrl;
+              break;
+            }
+            currentElement = currentElement.parentElement;
+          }
+        });
+      });
+      document.querySelectorAll(".delete_rule").forEach((button) => {
+        button.addEventListener("click", function (event) {
+          let currentElement = event.target;
+          while (currentElement) {
+            if (currentElement.tagName === "TR") {
+              fetch(window.location.href + currentElement.id, {
+                method: "DELETE",
+              }).then((response) => {
+                window.location.href = "/rules";
+              });
+              break;
+            }
+            currentElement = currentElement.parentElement;
+          }
+        });
+      });
     </script>
   </body>
 </html>

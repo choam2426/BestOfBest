@@ -27,7 +27,7 @@ def parse_iptables_forward(command_result):
     rules = []
     lines = command_result.split("\n")
     pass_count = 0
-    for line in lines[2:]:
+    for number, line in enumerate(lines[2:]):
         if line:
             parts = line.split()
             if parts[2] not in ["ACCEPT", "DROP"]:
@@ -35,6 +35,7 @@ def parse_iptables_forward(command_result):
             other_info = " ".join(parts[9:])
             port_data = parse_port_number(other_info)
             rule = {
+                "real_num": number,
                 "number": pass_count,
                 "target": parts[2],
                 "protocol": parts[3],
