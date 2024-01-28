@@ -1,9 +1,10 @@
+# from bson import ObjectId
 from fastapi import APIRouter, Path, Request
 from fastapi.templating import Jinja2Templates
 
 from src.db_connect import mongodb
 from src.iptables_command import *
-from src.update_iptables_rules_to_db import rewrite
+from src.update_iptables_rules_to_db import *
 
 from .schemas import iptable_rule
 
@@ -13,7 +14,7 @@ templates = Jinja2Templates(directory="templates")
 
 @router.get(path="/")
 async def get_rules_page(request: Request):
-    await rewrite()
+    # await rewrite()
     iptable_rules_collection = mongodb.db["iptables_rules"]
     rules = await iptable_rules_collection.find({}).to_list(None)
     return templates.TemplateResponse(
@@ -28,7 +29,12 @@ async def get_rule_create_page(request: Request):
 
 @router.post(path="/create")
 async def create_iptables_rules(request: Request, new_rule_data: iptable_rule):
-    append_iptables_rule(new_rule_data.model_dump())
+    iptable_rules_collection = mongodb.db["iptables_rules"]
+    count = await iptable_rules_collection.count_documents({})
+    insert_result = await iptable_rules_collection.insert_one({"number": count})
+    objId = str(insert_result.inserted_id)
+    append_iptables_rule(rule_data=new_rule_data.model_dump(), ID=objId)
+    await update_iptables_rules_to_db()
     return 1
 
 

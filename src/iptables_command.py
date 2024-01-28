@@ -1,7 +1,8 @@
+import copy
 import subprocess
 
 
-def append_iptables_rule(rule_data, rule_number=None):
+def append_iptables_rule(rule_data, ID, rule_number=None):
     if rule_number:
         command = ["sudo", "iptables", "-I", "FORWARD", (str(rule_number))]
     else:
@@ -26,7 +27,12 @@ def append_iptables_rule(rule_data, rule_number=None):
         command.append("-d")
         command.append(str(rule_data["d_ip"]))
     command.append("-j")
+    log_command = copy.deepcopy(command)
     command.append(rule_data["target"])
+    log_command.append("LOG")
+    log_command.append("--log-prefix")
+    log_command.append(f"FireWallLog ID: {ID}")
+    subprocess.run(log_command)
     subprocess.run(command)
 
 
