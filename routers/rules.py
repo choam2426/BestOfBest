@@ -1,4 +1,3 @@
-# from bson import ObjectId
 from fastapi import APIRouter, Path, Request
 from fastapi.templating import Jinja2Templates
 
@@ -29,9 +28,9 @@ async def get_rule_create_page(request: Request):
 
 @router.post(path="/create")
 async def create_iptables_rules(request: Request, new_rule_data: iptable_rule):
-    iptable_rules_collection = mongodb.db["iptables_rules"]
-    count = await iptable_rules_collection.count_documents({})
-    insert_result = await iptable_rules_collection.insert_one({"number": count})
+    iptables_rules_collection = mongodb.db["iptables_rules"]
+    count = await iptables_rules_collection.count_documents({})
+    insert_result = await iptables_rules_collection.insert_one({"number": count})
     objId = str(insert_result.inserted_id)
     append_iptables_rule(rule_data=new_rule_data.model_dump(), ID=objId)
     await update_iptables_rules_to_db()
@@ -60,5 +59,12 @@ async def update_iptables_rules(
 
 @router.delete(path="/{rule_number}")
 async def get_rule_create_page(request: Request, rule_number: int = Path()):
-    delete_iptables_rule(rule_number)
+    iptables_rules_collection = mongodb.db["iptables_rules"]
+    iptables_log_rules_collection = mongodb.db["iptables_log_rules"]
+    iptables_rule_number = await iptables_rules_collection.find_one(
+        {"number": rule_number}, {"_id": 0, "real_num": 1}
+    )
+    delete_iptables_rule(rule_number=iptables_rule_number["real_num"])
+    await iptables_rules_collection.delete_one({"number": rule_number})
+    await iptables_log_rules_collection.delete_one({"number": rule_number})
     return 1

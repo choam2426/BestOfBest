@@ -31,13 +31,14 @@ def append_iptables_rule(rule_data, ID, rule_number=None):
     command.append(rule_data["target"])
     log_command.append("LOG")
     log_command.append("--log-prefix")
-    log_command.append(f"FireWallLog ID: {ID}")
+    log_command.append(f"FID: {ID}")
     subprocess.run(log_command)
     subprocess.run(command)
 
 
 def delete_iptables_rule(rule_number):
-    command = ["sudo", "iptables", "-D", "FORWARD", str(rule_number)]
+    command = ["sudo", "iptables", "-D", "FORWARD", str(rule_number - 1)]
+    subprocess.run(command)
     subprocess.run(command)
 
 

@@ -1,6 +1,8 @@
 import asyncio
 import subprocess
 
+from bson import ObjectId
+
 from .db_connect import mongodb
 
 
@@ -30,22 +32,25 @@ def parse_iptables_forward(command_result):
     for number, line in enumerate(lines[2:]):
         if line:
             parts = line.split()
-            if parts[2] not in ["ACCEPT", "DROP"]:
-                continue
-            other_info = " ".join(parts[9:])
-            port_data = parse_port_number(other_info)
-            rule = {
-                "real_num": number + 1,
-                "number": pass_count,
-                "target": parts[2],
-                "protocol": parts[3],
-                "s_ip": add_subnet(parts[7]),
-                "d_ip": add_subnet(parts[8]),
-                "s_port": port_data.get("s_port"),
-                "d_port": port_data.get("d_port"),
-            }
-            rules.append(rule)
-            pass_count += 1
+            if parts[2] in ["ACCEPT", "DROP", "LOG"]:
+                other_info = " ".join(parts[9:])
+                port_data = parse_port_number(other_info)
+                rule = {
+                    "real_num": number + 1,
+                    "number": pass_count,
+                    "target": parts[2],
+                    "protocol": parts[3],
+                    "s_ip": add_subnet(parts[7]),
+                    "d_ip": add_subnet(parts[8]),
+                    "s_port": port_data.get("s_port"),
+                    "d_port": port_data.get("d_port"),
+                }
+
+                if parts[2] == "LOG":
+                    rule["_id"] = ObjectId(parts[-1].replace('"', ""))
+                else:
+                    pass_count += 1
+                rules.append(rule)
     return rules
 
 
@@ -58,19 +63,27 @@ def get_iptables_rules():
 async def update_iptables_rules_to_db():
     command_result = get_iptables_rules()
     rules = parse_iptables_forward(command_result)
-    iptable_rules_collection = mongodb.db["iptables_rules"]
+    iptables_rules_collection = mongodb.db["iptables_rules"]
+    iptables_log_rules_collection = mongodb.db["iptables_log_rules"]
     for rule in rules:
         try:
-            query_result = await iptable_rules_collection.update_one(
-                {"number": rule["number"]}, {"$set": rule}, upsert=True
-            )
+            if rule["target"] == "LOG":
+                query_result = await iptables_log_rules_collection.update_one(
+                    {"_id": rule["_id"]}, {"$set": rule}, upsert=True
+                )
+            else:
+                query_result = await iptables_rules_collection.update_one(
+                    {"number": rule["number"]}, {"$set": rule}, upsert=True
+                )
         except Exception as e:
             print(e)
 
 
 async def clear_iptable_rules_collection():
     iptable_rules_collection = mongodb.db["iptables_rules"]
+    iptables_log_rules_collection = mongodb.db["iptables_log_rules"]
     query_result = await iptable_rules_collection.delete_many({})
+    query_result = await iptables_log_rules_collection.delete_many({})
 
 
 async def rewrite():
