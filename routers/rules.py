@@ -2,6 +2,7 @@ from fastapi import APIRouter, Path, Request
 from fastapi.templating import Jinja2Templates
 
 from src.db_connect import mongodb
+from src.db_control import update_number_when_delete
 from src.iptables_command import *
 from src.update_iptables_rules_to_db import *
 
@@ -77,4 +78,6 @@ async def get_rule_create_page(request: Request, rule_number: int = Path()):
     delete_iptables_rule(rule_number=iptables_rule_number["real_num"])
     await iptables_rules_collection.delete_one({"number": rule_number})
     await iptables_log_rules_collection.delete_one({"number": rule_number})
+    await update_number_when_delete(iptables_rules_collection, rule_number)
+    await update_number_when_delete(iptables_log_rules_collection, rule_number)
     return 1
