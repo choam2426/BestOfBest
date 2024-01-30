@@ -45,9 +45,10 @@ def parse_iptables_forward(command_result):
                     "s_port": port_data.get("s_port"),
                     "d_port": port_data.get("d_port"),
                 }
-
+                fid = parts[-2].split(":")
                 if parts[2] == "LOG":
-                    rule["_id"] = ObjectId(parts[-1].replace('"', ""))
+                    rule["_id"] = ObjectId(fid[1])
+                    rule["pkt"] = 0
                 else:
                     pass_count += 1
                 rules.append(rule)

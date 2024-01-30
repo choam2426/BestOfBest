@@ -13,14 +13,11 @@
         <thead>
           <tr>
             <th scope="col">.</th>
-            <th scope="col">time</th>
             <th scope="col">protocol</th>
             <th scope="col">source</th>
             <th scope="col">destination</th>
             <th scope="col">sport</th>
             <th scope="col">dport</th>
-            <th scope="col">source mac</th>
-            <th scope="col">destination mac</th>
           </tr>
           <tr>
             <th scope="col">.</th>
@@ -64,44 +61,17 @@
                 onkeyup="searchTable(4)"
               />
             </th>
-            <th scope="col">
-              <input
-                type="text"
-                id="searchDport"
-                class="searchInput"
-                onkeyup="searchTable(5)"
-              />
-            </th>
-            <th scope="col">
-              <input
-                type="text"
-                id="searchDport"
-                class="searchInput"
-                onkeyup="searchTable(6)"
-              />
-            </th>
-            <th scope="col">
-              <input
-                type="text"
-                id="searchDport"
-                class="searchInput"
-                onkeyup="searchTable(7)"
-              />
-            </th>
           </tr>
         </thead>
         <tbody>
           {% for log in logs %}
           <tr>
             <th scope="row">{{ loop.index }}</th>
-            <td>{{log["time"]}}</td>
             <td>{{log["protocol"]}}</td>
-            <td>{{log["src_ip"]}}</td>
-            <td>{{log["dst_ip"]}}</td>
-            <td>{{log["src_port"]}}</td>
-            <td>{{log["dst_port"]}}</td>
-            <td>{{log.get("s_mac")}}</td>
-            <td>{{log.get("d_mac")}}</td>
+            <td>{{log["src"]}}</td>
+            <td>{{log["dst"]}}</td>
+            <td>{{log["sport"]}}</td>
+            <td>{{log["dport"]}}</td>
           </tr>
           {% endfor %}
         </tbody>

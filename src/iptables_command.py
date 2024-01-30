@@ -31,7 +31,7 @@ def append_iptables_rule(rule_data, ID, rule_number=None):
     command.append(rule_data["target"])
     log_command.append("LOG")
     log_command.append("--log-prefix")
-    log_command.append(f"FID: {ID}")
+    log_command.append(f"FID:{ID} ")
     if rule_number:
         subprocess.run(command)
         subprocess.run(log_command)
