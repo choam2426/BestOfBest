@@ -69,7 +69,7 @@ async def update_iptables_rules(
 
 
 @router.delete(path="/{rule_number}")
-async def get_rule_create_page(request: Request, rule_number: int = Path()):
+async def delete_rule(request: Request, rule_number: int = Path()):
     iptables_rules_collection = mongodb.db["iptables_rules"]
     iptables_log_rules_collection = mongodb.db["iptables_log_rules"]
     iptables_rule_number = await iptables_rules_collection.find_one(
@@ -81,3 +81,12 @@ async def get_rule_create_page(request: Request, rule_number: int = Path()):
     await update_number_when_delete(iptables_rules_collection, rule_number)
     await update_number_when_delete(iptables_log_rules_collection, rule_number)
     return 1
+
+
+@router.get(path="/unused")
+async def get_unused_rule(request: Request):
+    iptable_log_rules_collection = mongodb.db["iptables_log_rules"]
+    rules = await iptable_log_rules_collection.find({"pkt": 0}).to_list(None)
+    return templates.TemplateResponse(
+        request=request, name="rules.html", context={"rules": rules}
+    )

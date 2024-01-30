@@ -19,7 +19,11 @@
             <th scope="col">destination</th>
             <th scope="col">sport</th>
             <th scope="col">dport</th>
-            <th scope="col"></th>
+            <th scope="col">
+              <button type="button" class="btn btn-primary" id="unused_rule">
+                미사용 정책
+              </button>
+            </th>
             <th scope="col">
               <button type="button" class="btn btn-primary" id="create_rule">
                 생성
@@ -57,6 +61,12 @@
         .getElementById("create_rule")
         .addEventListener("click", function () {
           const redirectUrl = "/rules/create";
+          window.location.href = redirectUrl;
+        });
+      document
+        .getElementById("unused_rule")
+        .addEventListener("click", function () {
+          const redirectUrl = "/rules/unused";
           window.location.href = redirectUrl;
         });
 
