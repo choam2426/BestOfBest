@@ -24,14 +24,15 @@ def prevention_xss():
     pass
 
 
-def nfqueue_filter():
-    sqli_attack_flag = detect_sql_injection()
+def nfqueue_filter(raw_packet):
+    tcp_payload = raw_packet.haslayer(TCP)
+    sqli_attack_flag = detect_sql_injection(tcp_payload)
     if sqli_attack_flag:
         pass
-    xss_attack_flag = detect_xss()
+    xss_attack_flag = detect_xss(tcp_payload)
     if xss_attack_flag:
         pass
-        prevention_xss()
+        prevention_xss(tcp_payload)
 
 
 def run_nfqueue_filter():
