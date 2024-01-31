@@ -14,7 +14,7 @@ std::array<uint8_t, 6> broadcast_byte = {255,255,255,255,255,255};
 
 #pragma pack(push, 1)
 struct csa_tag {
-    uint8_t number = 25;
+    uint8_t number = 0x25;
     uint8_t len = 3;
     uint8_t mode = 1;
     uint8_t new_channel;
