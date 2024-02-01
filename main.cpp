@@ -93,7 +93,7 @@ void run_csa_attack(pcap_t* pcap, std::array<uint8_t, 6> ap_mac, std::array<uint
                 while(true){
                     uint8_t tag_number = *(packet + current_tag_offset);
                     uint8_t tag_len = *(packet + current_tag_offset + 1);
-                    if (tag_number>25){
+                    if (tag_number>37){
                         csa_tag_offset = current_tag_offset;
                         break;
                     }
