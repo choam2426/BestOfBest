@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Path, Request
+from fastapi import APIRouter, HTTPException, Path, Request
 from fastapi.templating import Jinja2Templates
 
 from src.db_connect import mongodb
 from src.db_control import update_number_when_delete
+from src.find_match_rule import find_cant_match_rule, find_match_rule
 from src.iptables_command import *
 from src.update_iptables_rules_to_db import *
 
@@ -89,4 +90,30 @@ async def get_unused_rule(request: Request):
     rules = await iptable_log_rules_collection.find({"pkt": 0}).to_list(None)
     return templates.TemplateResponse(
         request=request, name="rules.html", context={"rules": rules}
+    )
+
+
+@router.get(path="/unmatched")
+async def get_unmatched_rule(request: Request):
+    await find_cant_match_rule()
+    iptables_rules_collection = mongodb.db["iptables_rules"]
+    rules = await iptables_rules_collection.find({"isnt_match": True}).to_list(None)
+    return templates.TemplateResponse(
+        request=request, name="rules.html", context={"rules": rules}
+    )
+
+
+@router.get(path="/match-test")
+async def get_match_test_page(request: Request):
+    return templates.TemplateResponse(request=request, name="packet_test_form.html")
+
+
+@router.post(path="/match-test")
+async def get_match_rule(request: Request, test_data: iptable_rule):
+    test_data = test_data.model_dump()
+    if test_data["protocol"] == "all":
+        raise HTTPException(status_code=422, detail="dont use all")
+    match_rule_data = await find_match_rule(test_data)
+    return templates.TemplateResponse(
+        request=request, name="rules.html", context={"rules": [match_rule_data]}
     )

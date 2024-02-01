@@ -12,18 +12,6 @@ class iptable_rule(BaseModel):
     s_port: Optional[str] = None
     d_port: Optional[str] = None
 
-    @validator("s_port", "d_port")
-    def parse_str_to_int(cls, v):
-        if v is None or v == "":
-            return None
-        try:
-            int_v = int(v)
-        except ValueError:
-            raise ValueError("port는 0과 65535 사이의 값이어야 합니다")
-        if not 0 <= int_v <= 65535:
-            raise ValueError("port는 0과 65535 사이의 값이어야 합니다")
-        return v
-
     @validator("s_ip", "d_ip")
     def validate_and_convert_ip(cls, v):
         return str(v)

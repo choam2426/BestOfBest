@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Firewall</title>
+  </head>
+  <body>
+    <div id="content"></div>
+    <div id="formform">
+      {% include 'navbar.html' %} {% include 'bootstrap_cdn.html' %}
+      <br />
+      <form>
+        <div class="row mb-3">
+          <label for="gridRadios" class="col-sm-2 col-form-label">규칙</label>
+          <div class="col-sm-10">
+            <div class="dropdown">
+              <button
+                class="btn btn-secondary dropdown-toggle"
+                type="button"
+                id="radioDropdown"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Choose an option
+              </button>
+              <ul class="dropdown-menu" aria-labelledby="radioDropdown">
+                <li>
+                  <label class="dropdown-item">
+                    <input
+                      type="radio"
+                      name="target"
+                      id="gridRadios1"
+                      value="ACCEPT"
+                      checked
+                    />
+                    허용
+                  </label>
+                </li>
+                <li>
+                  <label class="dropdown-item">
+                    <input
+                      type="radio"
+                      name="target"
+                      id="gridRadios2"
+                      value="DROP"
+                    />
+                    거부
+                  </label>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="row mb-3">
+          <label for="gridRadios" class="col-sm-2 col-form-label"
+            >protocol</label
+          >
+          <div class="col-sm-10">
+            <div class="dropdown">
+              <button
+                class="btn btn-secondary dropdown-toggle"
+                type="button"
+                id="radioDropdown"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Choose an option
+              </button>
+              <ul class="dropdown-menu" aria-labelledby="radioDropdown">
+                <li>
+                  <label class="dropdown-item">
+                    <input
+                      type="radio"
+                      name="protocol"
+                      id="gridRadios1"
+                      value="all"
+                      checked
+                    />
+                    all
+                  </label>
+                </li>
+                <li>
+                  <label class="dropdown-item">
+                    <input
+                      type="radio"
+                      name="protocol"
+                      id="gridRadios2"
+                      value="tcp"
+                    />
+                    tcp
+                  </label>
+                </li>
+                <li>
+                  <label class="dropdown-item">
+                    <input
+                      type="radio"
+                      name="protocol"
+                      id="gridRadios2"
+                      value="udp"
+                    />
+                    udp
+                  </label>
+                </li>
+                <li>
+                  <label class="dropdown-item">
+                    <input
+                      type="radio"
+                      name="protocol"
+                      id="gridRadios2"
+                      value="icmp"
+                    />
+                    icmp
+                  </label>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="row mb-3">
+          <label for="inputEmail3" class="col-sm-2 col-form-label"
+            >출발지 IP</label
+          >
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="s_ip" name="s_ip" />
+          </div>
+        </div>
+        <div class="row mb-3">
+          <label for="inputEmail3" class="col-sm-2 col-form-label"
+            >목적지 IP</label
+          >
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="d_ip" name="d_ip" />
+          </div>
+        </div>
+        <div class="row mb-3">
+          <label for="inputEmail3" class="col-sm-2 col-form-label"
+            >출발지 PORT</label
+          >
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="s_port" name="s_port" />
+          </div>
+        </div>
+        <div class="row mb-3">
+          <label for="inputEmail3" class="col-sm-2 col-form-label"
+            >목적지 PORT</label
+          >
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="d_port" name="d_port" />
+          </div>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="submitForm()">
+          submit
+        </button>
+      </form>
+    </div>
+
+    <script>
+      async function submitForm() {
+        const formData = new FormData(document.querySelector("form"));
+        const formObject = {};
+        formData.forEach((value, key) => {
+          formObject[key] = value;
+        });
+        const jsonData = JSON.stringify(formObject);
+        console.log(jsonData);
+        fetch(window.location.href, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: jsonData,
+        })
+          .then((response) => {
+            if (!response.ok) {
+              return response.text().then((text) => {
+                throw new Error(text);
+              });
+            }
+            document.getElementById("formform").remove();
+            return response.text();
+          })
+          .then((html) => {
+            document.getElementById("content").innerHTML = html;
+          })
+          .catch((errorResponse) => {
+            errorResponse.json().then((errorData) => {
+              console.error("에러 발생:", errorData);
+            });
+          });
+      }
+    </script>
+  </body>
+</html>

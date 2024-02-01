@@ -14,6 +14,12 @@ def parse_port_number(text):
             s_port = part.split(":")[1]
         elif part.startswith("dpt:"):
             d_port = part.split(":")[1]
+        elif part.startswith("spts:"):
+            part = part.split(":")
+            s_port = part[1] + ":" + part[2]
+        elif part.startswith("dpts:"):
+            part = part.split(":")
+            d_port = part[1] + ":" + part[2]
     result = {"s_port": s_port, "d_port": d_port}
     return result
 
@@ -50,6 +56,7 @@ def parse_iptables_forward(command_result):
                     rule["_id"] = ObjectId(fid[1])
                     rule["pkt"] = 0
                 else:
+                    rule["isnt_match"] = False
                     pass_count += 1
                 rules.append(rule)
     return rules
