@@ -49,3 +49,10 @@ def delete_iptables_rule(rule_number):
 def update_iptables_rule(rule_number, rule_data, ID):
     delete_iptables_rule(rule_number)
     append_iptables_rule(rule_data=rule_data, rule_number=rule_number, ID=ID)
+
+
+def set_conntrack():
+    command = (
+        "sudo iptables -A FORWARD -m conntrack —ctstate RELATED,ESTABLISHED -j ACCEPT"
+    )
+    subprocess.run(command, shell=True)
