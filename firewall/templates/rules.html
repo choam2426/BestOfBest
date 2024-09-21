@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>firewall</title>
+    {% include 'bootstrap_cdn.html' %}
+  </head>
+  <body>
+    {% include 'navbar.html' %}
+    <div>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th scope="col">number</th>
+            <th scope="col">target</th>
+            <th scope="col">protocol</th>
+            <th scope="col">source</th>
+            <th scope="col">destination</th>
+            <th scope="col">sport</th>
+            <th scope="col">dport</th>
+            <th scope="col">
+              <button type="button" class="btn btn-primary" id="unused_rule">
+                미사용 정책
+              </button>
+              <button type="button" class="btn btn-primary" id="unmatched_rule">
+                미매칭 정책
+              </button>
+              <button type="button" class="btn btn-primary" id="create_rule">
+                생성
+              </button>
+              <button type="button" class="btn btn-primary" id="test_packet">
+                패킷 테스트
+              </button>
+            </th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rule in rules %}
+          <tr id="{{rule['number']}}">
+            <th scope="row">{{ rule["number"] }}</th>
+            <td>{{rule["target"]}}</td>
+            <td>{{rule["protocol"]}}</td>
+            <td>{{rule["s_ip"]}}</td>
+            <td>{{rule["d_ip"]}}</td>
+            <td>{{rule["s_port"]}}</td>
+            <td>{{rule["d_port"]}}</td>
+            <td>
+              <button type="button" class="btn btn-success update_rule">
+                수정
+              </button>
+              <button type="button" class="btn btn-danger delete_rule">
+                삭제
+              </button>
+            </td>
+            <td></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <script>
+      document
+        .getElementById("create_rule")
+        .addEventListener("click", function () {
+          const redirectUrl = "/rules/create";
+          window.location.href = redirectUrl;
+        });
+      document
+        .getElementById("unused_rule")
+        .addEventListener("click", function () {
+          const redirectUrl = "/rules/unused";
+          window.location.href = redirectUrl;
+        });
+      document
+        .getElementById("unmatched_rule")
+        .addEventListener("click", function () {
+          const redirectUrl = "/rules/unmatched";
+          window.location.href = redirectUrl;
+        });
+      document
+        .getElementById("test_packet")
+        .addEventListener("click", function () {
+          const redirectUrl = "/rules/match-test";
+          window.location.href = redirectUrl;
+        });
+
+      document.querySelectorAll(".update_rule").forEach((button) => {
+        button.addEventListener("click", function (event) {
+          let currentElement = event.target;
+          while (currentElement) {
+            if (currentElement.tagName === "TR") {
+              const redirectUrl = "/rules/update/" + currentElement.id;
+              window.location.href = redirectUrl;
+              break;
+            }
+            currentElement = currentElement.parentElement;
+          }
+        });
+      });
+      document.querySelectorAll(".delete_rule").forEach((button) => {
+        button.addEventListener("click", function (event) {
+          let currentElement = event.target;
+          while (currentElement) {
+            if (currentElement.tagName === "TR") {
+              fetch(window.location.href + currentElement.id, {
+                method: "DELETE",
+              }).then((response) => {
+                window.location.href = "/rules";
+              });
+              break;
+            }
+            currentElement = currentElement.parentElement;
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
